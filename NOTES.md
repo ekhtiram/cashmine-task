@@ -56,28 +56,26 @@ We chose an **optimistic overlay that never touches the API data**.
 
 ## Working with AI
 
+All conversations: `ai-logs/claude-code-session.jsonl`.
+
 ### A prompt that didn't work
 
-TODO
+First I told Claude about the blank claim status page, but it couldn't reproduce it in Chrome. I tried again on my iPhone and same problem happened with USDT and BTC. So I sent more details and screenshots, asked to check the navigation and try ErrorBoundary. At the end we decided to keep claim status on the same screen instead of opening another page. (log ~15:00–15:28)
 
-### A mistake the AI made
+### An AI mistake or risky output I caught
 
-TODO
+Claude listed token switching as a known limitation in the first NOTES: claims were still stored in localStorage even when changing the token. This didn't look safe to me because we could show claims from another token or retry an old request with new token. I asked Claude to fix it and add tests for switching tokens while requests are still running. (log ~14:50)
 
 ### Where I disagreed with the AI
 
-TODO
+Claude mentioned clock skew as one of the risks with optimistic balance updates. I didn't agree because both timestamps are coming from the server, not the user's device. But I also had doubts about using just `asOf > createdAt` to know if a claim is already included in the balance. We kept the approach but I wanted to test it with real API. I tested completed and failed claims on my iPhone and balances looked correct in both cases. (log ~14:28)
 
 ## Not done / known issues
 
-- **Activity** (history of accruals, reversals and claims) is not implemented. We skipped it to get
-  the balance and claim flow right first.
-- The balance overlay relies on the `asOf` assumption above. We checked one completed claim on the
-  live API, not a failed one.
-- If a claim whose result was unknown is resumed after a page reload and the server rejects it
-  (400), the request is dropped and the balance is unchanged, but no message is shown.
-- Claims made with the first deployed build (stored before per-token storage) are assigned to the
-  token that is active when the new build first loads.
-- Web only: the token and claim state are kept in `localStorage`. A native build would need secure
-  storage.
+- I didn't implement Activity because of the time limit. I preferred to spend more time on balances, claim flow and tests instead of adding another screen.
+- Claim status page was completely blank on my iPhone (twice). Claude couldn't reproduce it in Chrome and we didn't find the exact reason. We changed the flow to show claim status directly on the Claim screen and added error boundaries. I tested it again on iPhone and it worked.
+- Claim status shows destination ID instead of the label.
+- I didn't test every possible timeout or network error with the real API, even though the handling is implemented.
+- If a claim whose result was unknown is resumed after a page reload and the server rejects it (400), the request is dropped and the balance is unchanged, but no message is shown.
+- Web only: the token and claim state are kept in `localStorage`. A native build would need secure storage.
 - "Updated Xs ago" uses the device clock. It's display only; no money logic depends on it.
