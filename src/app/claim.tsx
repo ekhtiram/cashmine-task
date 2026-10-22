@@ -17,7 +17,7 @@ import {
 } from '@/components/ui';
 import { ApiError, getClaimOptions } from '@/lib/api';
 import { displayBalances } from '@/lib/balances';
-import { claimsStore, isAssetBlocked, startClaim } from '@/lib/claims';
+import { blockReason, claimsStore, startClaim } from '@/lib/claims';
 import { formatUnits, toUnits, validateClaim } from '@/lib/money';
 import { useBalances } from '@/lib/query';
 import { useStore } from '@/lib/store';
@@ -92,22 +92,27 @@ export default function ClaimScreen() {
     return (
       <Screen>
         {assetPicker}
-        {asset && !row ? <Notice tone="error" title={`Unknown asset ${asset}`} /> : null}
+        {asset && !row ? (
+          <Notice tone="error" title={`Unknown asset ${asset}`} />
+        ) : (
+          <T muted style={{ textAlign: 'center', padding: 16 }}>
+            Choose an asset above to see how much you can claim.
+          </T>
+        )}
       </Screen>
     );
   }
 
   const fmt = (u: bigint) => `${formatUnits(u, row.decimals)} ${row.asset}`;
 
-  if (isAssetBlocked(asset, asOf)) {
+  const blocked = blockReason(asset, asOf);
+  if (blocked) {
     return (
       <Screen>
         {assetPicker}
         <ClaimNotices asOf={asOf} asset={asset} />
-        <Notice tone="info" title={`A ${asset} claim is still in progress`}>
-          <T style={{ color: colors.info }}>
-            You can start a new {asset} claim once it is resolved and your balance is updated.
-          </T>
+        <Notice tone="info" title={`You can’t start a new ${asset} claim yet`}>
+          <T style={{ color: colors.info }}>{blocked}</T>
         </Notice>
       </Screen>
     );

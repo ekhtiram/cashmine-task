@@ -3,6 +3,8 @@
 React Native (Expo, TypeScript) app for the CashMine practical task, shipped as a web build for
 phone screens (~390 px).
 
+**Live:** https://ekhtiram-khudiev-cashmine-task.expo.app
+
 - **Balances:** each asset's available, pending and claiming amounts, total in USD, snapshot time,
   refresh, and error/retry states.
 - **Claim:** pick an asset, enter an amount or tap Max, see the fee and the amount received, review,

@@ -5,7 +5,7 @@ import { RefreshControl, StyleSheet, View } from 'react-native';
 import { ClaimNotices } from '@/components/claim-notices';
 import { Button, Card, colors, ErrorState, Loading, Notice, Row, Screen, T } from '@/components/ui';
 import { displayBalances, type DisplayBalance } from '@/lib/balances';
-import { claimsStore, isAssetBlocked } from '@/lib/claims';
+import { blockReason, claimsStore } from '@/lib/claims';
 import { formatUnits, formatUsd, usdCents } from '@/lib/money';
 import { useBalances } from '@/lib/query';
 import { useStore } from '@/lib/store';
@@ -80,7 +80,7 @@ export default function Home() {
       <ClaimNotices asOf={asOf} />
 
       {rows.map((r) => (
-        <AssetCard key={r.asset} b={r} blocked={isAssetBlocked(r.asset, asOf)} />
+        <AssetCard key={r.asset} b={r} blocked={blockReason(r.asset, asOf)} />
       ))}
 
       <Link href="/settings" style={styles.link}>
@@ -90,7 +90,7 @@ export default function Home() {
   );
 }
 
-function AssetCard({ b, blocked }: { b: DisplayBalance; blocked: boolean }) {
+function AssetCard({ b, blocked }: { b: DisplayBalance; blocked: string | null }) {
   const fmt = (u: bigint) => `${formatUnits(u, b.decimals)} ${b.asset}`;
   const usd = usdCents([{ units: b.availableUnits, decimals: b.decimals, usdPrice: b.usdPrice }]);
   return (
@@ -111,7 +111,7 @@ function AssetCard({ b, blocked }: { b: DisplayBalance; blocked: boolean }) {
       ) : null}
       {blocked ? (
         <T size={13} muted>
-          A claim for {b.asset} is in progress. You can claim again once it’s resolved.
+          {blocked}
         </T>
       ) : (
         <Button

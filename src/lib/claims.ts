@@ -55,8 +55,23 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** One unresolved claim per asset: an open intent or a claim not yet settled in the snapshot. */
 export function isAssetBlocked(asset: string, asOf: string | undefined) {
+  return blockReason(asset, asOf) !== null;
+}
+
+/** Why a new claim for this asset isn't allowed yet, in user terms; null if it is allowed. */
+export function blockReason(asset: string, asOf: string | undefined): string | null {
   const { intents, claims } = claimsStore.get();
-  return !!intents[asset] || claims.some((c) => c.asset === asset && !claimResolved(c, asOf));
+  if (intents[asset]) {
+    return `We’re confirming the result of your ${asset} claim. You can claim again once it’s confirmed.`;
+  }
+  const open = claims.filter((c) => c.asset === asset && !claimResolved(c, asOf));
+  if (open.some((c) => c.status === 'pending')) {
+    return `Your ${asset} claim is processing. You can claim again once it’s done.`;
+  }
+  if (open.length > 0) {
+    return `Your ${asset} claim has finished. Updating your balance; you can claim again in a few seconds.`;
+  }
+  return null;
 }
 
 function setIntent(asset: string, intent: Intent | null) {

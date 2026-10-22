@@ -1,6 +1,8 @@
 # Notes
 
-## How amounts are represented and calculated
+## Decisions
+
+### How amounts are represented and calculated
 
 - Every amount is a `bigint` in the asset's smallest unit (value × 10^`decimals`). No JS numbers or
   `parseFloat` anywhere in money code (`src/lib/money.ts`).
@@ -14,7 +16,7 @@
   (half-up) to cents, shown as "≈". The headline total is available + pending.
 - Unit tests: parsing, validation, fee, USD totals (`src/lib/money.test.ts`).
 
-## What the balance shows right after a claim is submitted
+### What the balance shows right after a claim is submitted
 
 We chose an **optimistic overlay that never touches the API data**.
 
@@ -32,8 +34,12 @@ We chose an **optimistic overlay that never touches the API data**.
 - **Assumption:** a snapshot includes every change before its `asOf`, based on the docs: "a claim you
   just created may not show up until the next one". If that's wrong, the display can be off for one
   snapshot (≤ 15 s).
+- Checked on the live API (iPhone): we claimed 20 USDT (fee 1.5, receive 18.5). Available went from
+  820.413207 to 800.413207 straight away and stayed there through the following snapshots, with no
+  double deduction and no jump back. Later the 50.12 pending became available (850.533207); the
+  overlay doesn't interfere with that.
 
-## What happens when the result of a claim request is unknown
+### What happens when the result of a claim request is unknown
 
 - On Confirm we save an **intent**: a UUID `Idempotency-Key` plus the exact request body. It goes to
   `localStorage` before the first request is sent.
@@ -50,5 +56,28 @@ We chose an **optimistic overlay that never touches the API data**.
 
 ## Working with AI
 
-<!-- TODO: three headings -->
+### A prompt that didn't work
+
 TODO
+
+### A mistake the AI made
+
+TODO
+
+### Where I disagreed with the AI
+
+TODO
+
+## Not done / known issues
+
+- **Activity** (history of accruals, reversals and claims) is not implemented. We skipped it to get
+  the balance and claim flow right first.
+- The balance overlay relies on the `asOf` assumption above. We checked one completed claim on the
+  live API, not a failed one.
+- If a claim whose result was unknown is resumed after a page reload and the server rejects it
+  (400), the request is dropped and the balance is unchanged, but no message is shown.
+- Claims made with the first deployed build (stored before per-token storage) are assigned to the
+  token that is active when the new build first loads.
+- Web only: the token and claim state are kept in `localStorage`. A native build would need secure
+  storage.
+- "Updated Xs ago" uses the device clock. It's display only; no money logic depends on it.
