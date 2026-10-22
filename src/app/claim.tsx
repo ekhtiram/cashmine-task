@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { ClaimNotices } from '@/components/claim-notices';
+import { ClaimStatusCard } from '@/components/claim-status-card';
+import { ErrorFallback } from '@/components/error-fallback';
 import {
   Button,
   Card,
@@ -15,13 +17,15 @@ import {
   Screen,
   T,
 } from '@/components/ui';
-import { ApiError, getClaimOptions } from '@/lib/api';
+import { ApiError, getClaimOptions, type Claim } from '@/lib/api';
 import { displayBalances } from '@/lib/balances';
 import { blockReason, claimsStore, startClaim } from '@/lib/claims';
 import { formatUnits, toUnits, validateClaim } from '@/lib/money';
 import { useBalances } from '@/lib/query';
 import { useStore } from '@/lib/store';
 import { useTokenScope } from '@/lib/token';
+
+export { ErrorFallback as ErrorBoundary };
 
 export default function ClaimScreen() {
   const params = useLocalSearchParams<{ asset?: string }>();
@@ -33,6 +37,11 @@ export default function ClaimScreen() {
   const [step, setStep] = useState<'form' | 'review'>('form');
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  // The claim created from this screen. Its status is shown here (no navigation); ClaimWatcher
+  // polls it app-wide and updates the store, which we mirror so the last state survives pruning.
+  const [submitted, setSubmitted] = useState<Claim | null>(null);
+  const live = submitted ? claims.find((c) => c.id === submitted.id) : undefined;
+  if (live && live !== submitted) setSubmitted(live); // adjust state during render (React docs pattern)
 
   const scope = useTokenScope();
   const options = useQuery({
@@ -40,6 +49,19 @@ export default function ClaimScreen() {
     queryFn: () => getClaimOptions(asset!),
     enabled: !!asset,
   });
+
+  if (submitted) {
+    return (
+      <Screen>
+        <ClaimStatusCard claim={live ?? submitted} />
+        <Button
+          title="Back to balances"
+          variant="secondary"
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+        />
+      </Screen>
+    );
+  }
 
   if (balances.isPending) return <Loading label="Loading balances…" />;
   if (!balances.data) {
@@ -170,7 +192,7 @@ export default function ClaimScreen() {
         },
         asOf,
       );
-      if (claim) router.replace(`/claims/${claim.id}`);
+      if (claim) setSubmitted(claim);
       // null = outcome unknown: the screen re-renders as "blocked" with the intent notice.
     } catch (e) {
       setServerError(

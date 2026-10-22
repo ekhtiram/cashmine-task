@@ -3,11 +3,15 @@ import { Stack } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { ClaimWatcher } from '@/components/claim-watcher';
+import { ErrorFallback } from '@/components/error-fallback';
 import { TokenForm } from '@/components/token-form';
 import { colors } from '@/components/ui';
 import { queryClient } from '@/lib/query';
 import { useStore } from '@/lib/store';
 import { tokenStore } from '@/lib/token';
+
+// Root-level boundary: a crash anywhere shows its message instead of a white page.
+export { ErrorFallback as ErrorBoundary };
 
 export default function RootLayout() {
   const { token, rejected } = useStore(tokenStore);
