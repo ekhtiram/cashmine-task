@@ -1,56 +1,42 @@
-# Welcome to your Expo app 👋
+# CashMine – payback balances & claims
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native (Expo, TypeScript) app for the CashMine practical task, shipped as a web build for
+phone screens (~390 px).
 
-## Get started
+- **Balances:** each asset's available, pending and claiming amounts, total in USD, snapshot time,
+  refresh, and error/retry states.
+- **Claim:** pick an asset, enter an amount or tap Max, see the fee and the amount received, review,
+  confirm, then follow the claim until it completes or fails.
 
-1. Install dependencies
+Decisions (amounts, the balance after a claim, unknown results) are explained in [NOTES.md](NOTES.md).
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run
 
 ```bash
-npm run reset-project
+npm install
+npx expo start --web     # dev server
+npm test                 # unit tests (Jest)
+npx tsc --noEmit         # typecheck
+npx expo lint            # lint
+npx expo export -p web   # production build in dist/
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+On first open the app asks for the API token. The token is kept only in the browser's
+`localStorage` and can be changed or removed in Settings. It is never part of the code or the build.
+The API base URL is set in one place: `src/lib/api.ts`.
 
-### Other setup steps
+## Structure
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```
+src/app/            screens (Expo Router): index (balances), claim, claims/[id], settings
+src/components/     UI pieces, token form, claim notices, ClaimWatcher (polling and resume)
+src/lib/money.ts    bigint amount parsing, validation, fee, USD
+src/lib/balances.ts snapshot + claim overlay
+src/lib/claims.ts   idempotent claim submission, intents, per-token storage
+src/lib/session.ts  token switching
+```
 
-## Learn more
+## Limitations
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Web only: storage uses `localStorage`. A native build would need secure storage.
+- Activity history is not implemented.
