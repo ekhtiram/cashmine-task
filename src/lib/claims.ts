@@ -135,8 +135,6 @@ export function pruneClaims(asOf: string) {
 }
 
 function newIdempotencyKey(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  // Available in all modern browsers on https and localhost.
+  return crypto.randomUUID();
 }
