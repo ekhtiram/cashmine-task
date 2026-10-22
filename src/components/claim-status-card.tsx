@@ -22,9 +22,9 @@ export function ClaimStatusCard({ claim: c }: { claim: Claim }) {
         </Notice>
       ) : (
         <Notice tone="error" title="Failed">
+          {c.failureReason ? <T style={{ color: colors.danger }}>{c.failureReason}</T> : null}
           <T style={{ color: colors.danger }}>
-            {c.failureReason ?? 'No reason given.'} {c.amount} {c.asset} was returned to your
-            available balance.
+            {c.amount} {c.asset} is back in your available balance.
           </T>
         </Notice>
       )}

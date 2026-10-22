@@ -47,10 +47,10 @@ export function ClaimNotices({ asOf, asset }: { asOf?: string; asset?: string })
         }
         return (
           <Notice key={c.id} tone="error" title={`Claim of ${what} failed`}>
-            <T style={{ color: colors.danger }}>
-              {c.failureReason ?? 'No reason given.'} {what} was returned to your available
-              balance.
-            </T>
+            {c.failureReason ? (
+              <T style={{ color: colors.danger }}>{c.failureReason}</T>
+            ) : null}
+            <T style={{ color: colors.danger }}>{what} is back in your available balance.</T>
             <Button title="Dismiss" variant="secondary" onPress={() => dismissClaim(c.id)} />
           </Notice>
         );
