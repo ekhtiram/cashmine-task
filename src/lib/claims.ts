@@ -2,6 +2,7 @@ import { ApiError, createClaim, isOutcomeUnknown, type Claim, type ClaimBody } f
 import { claimResolved } from './balances';
 import { queryClient } from './query';
 import { createPersistedStore } from './store';
+import { tokenScope, tokenStore } from './token';
 
 // An intent is a claim request whose result we don't know yet. Its idempotency key and exact
 // body are saved BEFORE the first request and reused for every retry, so the server can create
@@ -17,18 +18,36 @@ export type TrackedClaim = Claim & { dismissed?: boolean };
 
 type ClaimsState = { intents: Record<string, Intent>; claims: TrackedClaim[] };
 
-export const claimsStore = createPersistedStore<ClaimsState>('cashmine.claims.v1', {
-  intents: {},
-  claims: [],
-});
+/** Claims and intents are stored per token, so one token's claims are never shown or retried with another. */
+export const claimsKey = (token: string | null) => `cashmine.claims.${tokenScope(token)}`;
 
-// A page reload interrupts any request in flight: its result is unknown.
-claimsStore.set((s) => ({
+// Loaded state comes from an earlier session (reload or token switch): any request that was in
+// flight then has an unknown result.
+const markInterrupted = (s: ClaimsState): ClaimsState => ({
   ...s,
   intents: Object.fromEntries(
     Object.entries(s.intents).map(([asset, i]) => [asset, { ...i, phase: 'unknown' as const }]),
   ),
-}));
+});
+
+const LEGACY_KEY = 'cashmine.claims.v1';
+const EMPTY: ClaimsState = { intents: {}, claims: [] };
+
+// One-off migration: the first build stored claims unscoped; they belong to the token in use then.
+try {
+  const legacy = globalThis.localStorage?.getItem(LEGACY_KEY);
+  const scoped = claimsKey(tokenStore.get().token);
+  if (legacy && tokenStore.get().token && !globalThis.localStorage.getItem(scoped)) {
+    globalThis.localStorage.setItem(scoped, legacy);
+  }
+  if (legacy) globalThis.localStorage.removeItem(LEGACY_KEY);
+} catch {}
+
+export const claimsStore = createPersistedStore<ClaimsState>(
+  claimsKey(tokenStore.get().token),
+  EMPTY,
+  markInterrupted,
+);
 
 const MAX_ATTEMPTS = 4;
 const inFlight = new Set<string>();
@@ -63,15 +82,22 @@ export function startClaim(body: ClaimBody, asOf: string | undefined): Promise<C
  * Resolves with the claim, null if still unknown; rejects with ApiError on a 400 (not created).
  */
 export async function sendIntent(asset: string): Promise<Claim | null> {
-  if (inFlight.has(asset)) return null;
-  inFlight.add(asset);
+  const scope = claimsStore.key();
+  const flightKey = `${scope}:${asset}`;
+  if (inFlight.has(flightKey)) return null;
+  inFlight.add(flightKey);
+  // If the token changes while we wait, stop. The intent stays saved under its own token and is
+  // resumed with the same key and body when that token is used again; never sent with another.
+  const switched = () => claimsStore.key() !== scope;
   try {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      if (switched()) return null;
       const intent = claimsStore.get().intents[asset];
       if (!intent) return null;
       setIntent(asset, { ...intent, phase: 'sending', error: undefined });
       try {
         const claim = await createClaim(intent.key, intent.body);
+        if (switched()) return null;
         claimsStore.set((s) => {
           const intents = { ...s.intents };
           delete intents[asset];
@@ -80,6 +106,7 @@ export async function sendIntent(asset: string): Promise<Claim | null> {
         queryClient.invalidateQueries({ queryKey: ['balances'] });
         return claim;
       } catch (e) {
+        if (switched()) return null;
         const err = e instanceof ApiError ? e : null;
         if (err?.status === 400) {
           // Rejected by validation: definitely not created. Safe to forget the key.
@@ -101,7 +128,7 @@ export async function sendIntent(asset: string): Promise<Claim | null> {
     }
     return null;
   } finally {
-    inFlight.delete(asset);
+    inFlight.delete(flightKey);
   }
 }
 

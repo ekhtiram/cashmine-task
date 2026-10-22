@@ -8,20 +8,40 @@ export type Store<T> = {
   subscribe: (listener: () => void) => () => void;
 };
 
-export function createPersistedStore<T>(key: string, initial: T): Store<T> {
-  let state = readJson(key, initial);
+export type PersistedStore<T> = Store<T> & {
+  /** The localStorage key currently backing the store. */
+  key: () => string;
+  /** Switches to another key and loads its state. */
+  load: (key: string) => void;
+};
+
+export function createPersistedStore<T>(
+  initialKey: string,
+  initial: T,
+  /** Applied to state read from storage. */
+  onLoad: (state: T) => T = (s) => s,
+): PersistedStore<T> {
+  let key = initialKey;
+  let state = onLoad(readJson(key, initial));
   const listeners = new Set<() => void>();
+  const notify = () => listeners.forEach((l) => l());
   return {
     get: () => state,
     set(next) {
       state = typeof next === 'function' ? (next as (prev: T) => T)(state) : next;
       // Written synchronously, so it's on disk before any request that depends on it.
       writeJson(key, state);
-      listeners.forEach((l) => l());
+      notify();
     },
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    key: () => key,
+    load(nextKey) {
+      key = nextKey;
+      state = onLoad(readJson(key, initial));
+      notify();
     },
   };
 }
@@ -30,7 +50,7 @@ export function useStore<T>(store: Store<T>): T {
   return useSyncExternalStore(store.subscribe, store.get, store.get);
 }
 
-function readJson<T>(key: string, fallback: T): T {
+export function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = globalThis.localStorage?.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;

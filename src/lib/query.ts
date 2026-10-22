@@ -1,6 +1,7 @@
 import { QueryClient, useQuery } from '@tanstack/react-query';
 
 import { ApiError, getBalances } from './api';
+import { useTokenScope } from './token';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,5 +20,6 @@ export const queryClient = new QueryClient({
 });
 
 export function useBalances(refetchInterval: number | false = false) {
-  return useQuery({ queryKey: ['balances'], queryFn: getBalances, refetchInterval });
+  const scope = useTokenScope();
+  return useQuery({ queryKey: ['balances', scope], queryFn: getBalances, refetchInterval });
 }

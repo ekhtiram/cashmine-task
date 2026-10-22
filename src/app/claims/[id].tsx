@@ -4,12 +4,14 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { Button, Card, colors, ErrorState, Loading, Notice, Row, Screen, T } from '@/components/ui';
 import { getClaim } from '@/lib/api';
+import { useTokenScope } from '@/lib/token';
 
 export default function ClaimStatus() {
   const { id } = useLocalSearchParams<{ id: string }>();
   // Same query key as ClaimWatcher, so both share one poll.
+  const scope = useTokenScope();
   const q = useQuery({
-    queryKey: ['claim', id],
+    queryKey: ['claim', scope, id],
     queryFn: () => getClaim(id),
     refetchInterval: (query) => (query.state.data?.status === 'pending' ? 2000 : false),
   });

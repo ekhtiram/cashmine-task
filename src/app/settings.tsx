@@ -2,9 +2,9 @@ import { router } from 'expo-router';
 
 import { TokenForm } from '@/components/token-form';
 import { Button, Card, Screen, T } from '@/components/ui';
-import { queryClient } from '@/lib/query';
 import { useStore } from '@/lib/store';
-import { clearToken, tokenStore } from '@/lib/token';
+import { setToken } from '@/lib/session';
+import { tokenStore } from '@/lib/token';
 
 export default function Settings() {
   const { token } = useStore(tokenStore);
@@ -19,8 +19,7 @@ export default function Settings() {
         title="Remove token"
         variant="secondary"
         onPress={() => {
-          clearToken();
-          queryClient.clear();
+          setToken(null);
           router.replace('/');
         }}
       />

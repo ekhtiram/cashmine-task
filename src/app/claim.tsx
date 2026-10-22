@@ -21,6 +21,7 @@ import { claimsStore, isAssetBlocked, startClaim } from '@/lib/claims';
 import { formatUnits, toUnits, validateClaim } from '@/lib/money';
 import { useBalances } from '@/lib/query';
 import { useStore } from '@/lib/store';
+import { useTokenScope } from '@/lib/token';
 
 export default function ClaimScreen() {
   const params = useLocalSearchParams<{ asset?: string }>();
@@ -33,8 +34,9 @@ export default function ClaimScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
+  const scope = useTokenScope();
   const options = useQuery({
-    queryKey: ['claim-options', asset],
+    queryKey: ['claim-options', scope, asset],
     queryFn: () => getClaimOptions(asset!),
     enabled: !!asset,
   });

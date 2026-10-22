@@ -6,16 +6,18 @@ import { claimResolved } from '@/lib/balances';
 import { claimsStore, pruneClaims, sendIntent, updateClaim } from '@/lib/claims';
 import { useBalances } from '@/lib/query';
 import { useStore } from '@/lib/store';
+import { useTokenScope } from '@/lib/token';
 
 // Runs app-wide: polls pending claims, keeps balances fresh while a claim is unresolved,
-// and resumes intents whose outcome was unknown when the page was closed.
+// and resumes intents whose outcome is unknown (on load and whenever the token changes).
 export function ClaimWatcher() {
+  const scope = useTokenScope();
   const { claims, intents } = useStore(claimsStore);
   const pending = claims.filter((c) => c.status === 'pending');
 
   const results = useQueries({
     queries: pending.map((c) => ({
-      queryKey: ['claim', c.id],
+      queryKey: ['claim', scope, c.id],
       queryFn: () => getClaim(c.id),
       refetchInterval: 2000,
     })),
@@ -47,7 +49,7 @@ export function ClaimWatcher() {
         // 400 on resume: the claim was never created; the intent is cleared.
       });
     }
-  }, []);
+  }, [scope]);
 
   return null;
 }

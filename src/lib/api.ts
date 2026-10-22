@@ -91,6 +91,12 @@ async function request<T>(
     // handled below
   }
 
+  // The user switched tokens while this request was running: its result belongs to the old
+  // token and must not reach the new token's state (and an old 401 must not reject the new token).
+  if (tokenStore.get().token !== token) {
+    throw new ApiError(0, 'TOKEN_CHANGED', 'The API token changed during the request');
+  }
+
   if (!res.ok) {
     const err = json?.error;
     let retryAfterMs: number | undefined = err?.retryAfterMs;

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
-import { queryClient } from '@/lib/query';
-import { saveToken } from '@/lib/token';
+import { setToken } from '@/lib/session';
 
 import { Button, Card, colors, Notice, T } from './ui';
 
@@ -10,8 +9,7 @@ export function TokenForm({ rejected }: { rejected?: boolean }) {
   const [value, setValue] = useState('');
   const submit = () => {
     if (!value.trim()) return;
-    saveToken(value);
-    queryClient.invalidateQueries();
+    setToken(value);
     setValue('');
   };
   return (
